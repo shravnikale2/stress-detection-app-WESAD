@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import pickle
 
-# Load model and scaler
+# Load model
 with open("best_model_gb.pkl", "rb") as f:
     model = pickle.load(f)
 
@@ -29,9 +29,7 @@ if st.button("Predict Stress Level"):
                           max_ecg, min_ecg, mean_eda, std_eda,
                           mean_temp, std_temp]])
 
-   
     pred = model.predict(features)[0]
-
 
     if pred == 0:
         st.success("Prediction: RELAXED (Label 0)")
