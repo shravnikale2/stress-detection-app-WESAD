@@ -2,13 +2,13 @@ import streamlit as st
 import numpy as np
 import pickle
 
-# Load model
+# ------------------ LOAD MODEL ------------------
 with open("best_model_gb.pkl", "rb") as f:
     model = pickle.load(f)
 
 st.set_page_config(page_title="Stress Detection", layout="wide")
 
-# Sidebar
+# ------------------ SIDEBAR: SAMPLE INPUTS ------------------
 st.sidebar.title("Sample Inputs")
 
 if st.sidebar.button("Fill Relaxed Sample"):
@@ -35,12 +35,15 @@ if st.sidebar.button("Fill Stressed Sample"):
     st.session_state.mean_temp = 31.80
     st.session_state.std_temp = 0.07
 
+
+# ------------------ MAIN UI ------------------
 st.title("🧠 Wearable Stress Detection System")
+
 st.write("Enter physiological features to predict stress using the WESAD dataset ML model.")
 
-# Collect Inputs
 col1, col2 = st.columns(2)
 
+# Left Column Inputs
 with col1:
     mean_ecg = st.number_input("Mean ECG", format="%.5f", key="mean_ecg")
     std_ecg = st.number_input("STD ECG", format="%.5f", key="std_ecg")
@@ -49,32 +52,54 @@ with col1:
     max_ecg = st.number_input("Max ECG", format="%.5f", key="max_ecg")
     min_ecg = st.number_input("Min ECG", format="%.5f", key="min_ecg")
 
+# Right Column Inputs
 with col2:
     mean_eda = st.number_input("Mean EDA", format="%.5f", key="mean_eda")
     std_eda = st.number_input("STD EDA", format="%.5f", key="std_eda")
     mean_temp = st.number_input("Mean Temperature", format="%.5f", key="mean_temp")
     std_temp = st.number_input("STD Temperature", format="%.5f", key="std_temp")
 
-# Predict Button
+
+# ------------------ PREDICT BUTTON ------------------
 if st.button("Predict Stress Level"):
+    # Correct feature order
     features = np.array([[mean_ecg, std_ecg, skew_ecg, kurt_ecg,
                           max_ecg, min_ecg, mean_eda, std_eda,
                           mean_temp, std_temp]])
 
-    pred_class = model.predict(features)[0]
+    stressed_prob = None
+    pred_class = None
 
-    # Probability (if supported)
+    # ------------ PROBABILITY-BASED FIX (IMPORTANT) ------------
     try:
-        prob = model.predict_proba(features)[0]
-        stress_prob = prob[1] if len(prob) > 1 else None
-    except:
-        stress_prob = None
+        probs = model.predict_proba(features)[0]
 
+        # find index of class "2"
+        classes = model.classes_
+        if 2 in classes:
+            idx_2 = list(classes).index(2)
+            stressed_prob = probs[idx_2]
+        else:
+            stressed_prob = probs[-1]  # fallback
+
+        # Threshold fix — THIS MAKES STRESS DETECTION WORK
+        THRESHOLD = 0.35  # adjust between 0.30–0.40 if needed
+        if stressed_prob >= THRESHOLD:
+            pred_class = 2
+        else:
+            pred_class = 0
+
+    except:
+        # If model does not support predict_proba()
+        pred_class = int(model.predict(features)[0])
+
+    # ------------------ DISPLAY RESULT ------------------
     if pred_class == 2:
         st.markdown("<h2 style='color:red;'>🔴 PREDICTION: STRESSED</h2>", unsafe_allow_html=True)
-        if stress_prob is not None:
-            st.write(f"Confidence: **{stress_prob*100:.2f}%**")
+        if stressed_prob is not None:
+            st.write(f"Confidence (P(stress)) = **{stressed_prob*100:.2f}%**")
     else:
         st.markdown("<h2 style='color:green;'>🟢 PREDICTION: RELAXED</h2>", unsafe_allow_html=True)
-        if stress_prob is not None:
-            st.write(f"Confidence: **{stress_prob*100:.2f}%**")
+        if stressed_prob is not None:
+            st.write(f"Confidence (P(stress)) = **{stressed_prob*100:.2f}%**")
+
