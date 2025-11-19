@@ -5,8 +5,6 @@ import pickle
 # Load model and scaler
 with open("best_model_gb.pkl", "rb") as f:
     model = pickle.load(f)
-with open("scaler.pkl", "rb") as f:
-    scaler = pickle.load(f)
 
 st.title("Wearable Stress Detection System")
 st.write("Enter physiological features to predict stress level.")
@@ -31,10 +29,9 @@ if st.button("Predict Stress Level"):
                           max_ecg, min_ecg, mean_eda, std_eda,
                           mean_temp, std_temp]])
 
-    # Scale the input features
-    scaled_features = scaler.transform(features)
+   
+   pred = model.predict(features)[0]
 
-    pred = model.predict(scaled_features)[0]
 
     if pred == 0:
         st.success("Prediction: RELAXED (Label 0)")
