@@ -30,7 +30,7 @@ if st.button("Predict Stress Level"):
                           mean_temp, std_temp]])
 
    
-   pred = model.predict(features)[0]
+    pred = model.predict(features)[0]
 
 
     if pred == 0:
